@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BeyMasterpiece — Prototipo</title>
+<style>
+:root{
+  --bg:#071426; --panel:#0f1b2b; --accent:#66e3ff; --muted:#9fb5e6;
+  --ok:#7ee787; --danger:#ff7aa2; --glass: rgba(255,255,255,0.03);
+}
+*{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;}
+body{margin:0;background:linear-gradient(180deg,var(--bg),#02101a);color:#e7f3ff;-webkit-font-smoothing:antialiased;}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.03)}
+h1{font-size:18px;margin:0}
+.app{display:grid;grid-template-columns:360px 1fr;gap:14px;padding:14px;max-width:1400px;margin:0 auto;}
+.panel{background:var(--panel);padding:12px;border-radius:12px;border:1px solid var(--glass);}
+.small{font-size:13px;color:var(--muted)}
+.list{display:grid;gap:8px;max-height:260px;overflow:auto;padding:6px;}
+.piece{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);cursor:pointer;border:1px solid rgba(255,255,255,0.02)}
+.piece.selected{outline:2px solid rgba(102,227,255,0.12);box-shadow:0 6px 18px rgba(2,6,23,0.6) inset;}
+.row{display:flex;gap:8px;align-items:center}
+.btn{padding:8px 10px;border-radius:8px;background:#0b213a;border:1px solid rgba(255,255,255,0.03);color:#dff1ff;font-weight:700;cursor:pointer}
+.controls{display:flex;gap:8px;align-items:center}
+.canvas-wrap{display:flex;flex-direction:column;gap:10px}
+canvas{background: radial-gradient(circle at 50% 40%, #073047 0%, #031018 60%);border-radius:12px;border:1px solid rgba(255,255,255,0.03);width:100%;height:720px;display:block}
+ hud{}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.stat{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:8px;border-radius:8px;text-align:center}
+.stat .val{font-weight:800;font-size:16px;color:#eaf8ff}
+.flex{display:flex;gap:8px;align-items:center}
+.range{width:160px}
+.barwrap{width:220px;background:rgba(255,255,255,0.04);height:14px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
+.bar{height:100%;background:linear-gradient(90deg,var(--ok),#3ad1ff);width:100%}
+.bar.red{background:linear-gradient(90deg,#ff9ab0,#ff6b6b)}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.footer{padding:12px;text-align:center;color:var(--muted)}
+kbd{background:#091a2b;padding:4px 6px;border-radius:6px;border:1px solid rgba(255,255,255,0.02);font-weight:700}
+.note{font-size:13px;color:#bcd7ff}
+.tag{padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.02);font-size:13px}
+.hline{height:1px;background:rgba(255,255,255,0.03);margin:8px 0;border-radius:2px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🔥 BeyMasterpiece — Prototipo</h1>
+  <div style="margin-left:auto" class="small">Completo: piezas, físicas, IA, barras Resistencia/Explosión</div>
+</header>
+
+<div class="app">
+  <aside class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><strong class="small">Construir Bey</strong><div class="note">Elige Layer, Disco y Punta</div></div>
+      <div><button id="randomize" class="btn">Aleatorio</button></div>
+    </div>
+
+    <div class="hline"></div>
+
+    <div style="margin-top:6px">
+      <div class="small">Capas (Layer)</div>
+      <div id="layers" class="list"></div>
+    </div>
+
+    <div style="margin-top:10px">
+      <div class="small">Discos (Forge)</div>
+      <div id="discs" class="list"></div>
+    </div>
+
+    <div style="margin-top:10px">
+      <div class="small">Puntas (Driver)</div>
+      <div id="tips" class="list"></div>
+    </div>
+
+    <div class="hline"></div>
+
+    <div style="margin-top:8px">
+      <div class="small">Lanzador</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <select id="launchMode" style="flex:1;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03)">
+          <option value="center">Centro (stay)</option>
+          <option value="attack">Ataque (agresivo)</option>
+          <option value="speed">Velocidad</option>
+        </select>
+        <input id="power" type="range" min="20" max="200" value="120" class="range">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="flex:1"><input id="angle" type="range" min="-60" max="60" value="0" class="range"></div>
+        <div style="width:80px;text-align:center" class="small">Ángulo: <span id="angleLabel">0°</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button id="spawnBtn" class="btn" style="flex:1">Armar / Reaparecer</button>
+      <button id="resetBtn" class="btn" style="flex:1">Reiniciar</button>
+    </div>
+
+    <div class="hline"></div>
+
+    <div style="margin-top:8px">
+      <div class="small">Info Rápida</div>
+      <div class="note">Ataque > Resistencia, Defensa > Ataque, Resistencia > Defensa</div>
+      <div style="margin-top:6px" class="legend">
+        <div class="tag">Ataque</div><div class="tag">Defensa</div><div class="tag">Resistencia</div><div class="tag">Equilibrio</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <main>
+    <div class="panel canvas-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Jugando contra IA — prueba tus combinaciones</div>
+          <div style="margin-top:6px"><strong id="beyTitle">—</strong> <span id="beyType" class="small"></span></div>
+        </div>
+        <div class="controls">
+          <div class="small">Velocidad del juego</div>
+          <select id="speed" style="padding:6px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03)">
+            <option value="1">1x</option><option value="1.5">1.5x</option><option value="2">2x</option>
+          </select>
+          <button id="launchBtn" class="btn">Lanzar</button>
+        </div>
+      </div>
+
+      <canvas id="arena" width="1000" height="720" role="img" aria-label="Arena de Beyblade"></canvas>
+
+      <div style="display:flex;gap:12px;justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="width:220px">
+            <div class="small">Tu Resistencia</div>
+            <div class="barwrap"><div id="resBar" class="bar" style="width:100%"></div></div>
+          </div>
+          <div style="width:220px">
+            <div class="small">Tu Explosión</div>
+            <div class="barwrap"><div id="burstBar" class="bar red" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="small">IA</div>
+          <div style="width:220px">
+            <div class="small">Resistencia</div>
+            <div class="barwrap"><div id="resBarAI" class="bar" style="width:100%"></div></div>
+          </div>
+          <div style="width:220px">
+            <div class="small">Explosión</div>
+            <div class="barwrap"><div id="burstBarAI" class="bar red" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div style="text-align:right">
+          <div class="small">Resultado</div>
+          <div id="result" style="font-weight:800;font-size:16px;color:#bde4ff">—</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="panel" style="margin-top:10px">
+      <div style="display:flex;gap:10px;align-items:center;justify-content:space-between">
+        <div><strong class="small">Stats del Bey</strong></div>
+        <div class="small">Masa = afecta salir del estadio / llenado de explosión</div>
+      </div>
+      <div class="stats" id="statGrid">
+        <div class="stat"><div class="small">Ataque</div><div id="statAtk" class="val">--</div></div>
+        <div class="stat"><div class="small">Defensa</div><div id="statDef" class="val">--</div></div>
+        <div class="stat"><div class="small">Resistencia</div><div id="statSta" class="val">--</div></div>
+        <div class="stat"><div class="small">Velocidad</div><div id="statSpd" class="val">--</div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="footer">Descárgalo localmente si quieres seguir modificando. Controles: click para posicionar/arrastrar para apuntar. Buenas batallas.</div>
+
+<script>
+/* =====================
+   Datos de piezas
+   ===================== */
+const LAYERS = [
+  {id:'inferno', name:'Inferno Fang', type:'attack', atk:88, def:28, sta:40, mass:6, desc:'Ataque elevado; daño extra con velocidad.'},
+  {id:'titan', name:'Titan Shell', type:'defense', atk:28, def:92, sta:56, mass:9, desc:'Defensa seria; reduce daño.'},
+  {id:'eternal', name:'Eternal Wind', type:'stamina', atk:32, def:44, sta:98, mass:4, desc:'Pierde menos stamina con tiempo.'},
+  {id:'chaos', name:'Chaos Balance', type:'balance', atk:55, def:55, sta:55, mass:6, desc:'Equilibrio adaptable.'},
+  {id:'void', name:'Void Serpent', type:'attack', atk:78, def:38, sta:48, mass:5, desc:'Ataque con pequeño efecto de veneno.'},
+  {id:'goliath', name:'Goliath Shield', type:'defense', atk:30, def:86, sta:66, mass:10, desc:'Muy pesado, aguanta impactos.'},
+  {id:'zenith', name:'Zenith Core', type:'stamina', atk:36, def:40, sta:90, mass:5, desc:'Calidad de stamina alta.'},
+  {id:'nova', name:'Nova Strike', type:'attack', atk:90, def:24, sta:34, mass:5, desc:'Ataque extremo, frágil.'},
+  {id:'aegis', name:'Aegis Bulwark', type:'defense', atk:34, def:80, sta:64, mass:8, desc:'Balance defensivo con masa.'},
+  {id:'equus', name:'Equus Prime', type:'balance', atk:60, def:60, sta:60, mass:6, desc:'Diseño balanceado.'}
+];
+
+const DISCS = [
+  {id:'ironcore', name:'Iron Core', mass:5, bonusDef:12, bonusSta:6, bonusAtk:0, desc:'Muy pesado; reduce posibilidad de burst.'},
+  {id:'phantom', name:'Phantom Ring', mass:3, bonusDef:6, bonusSta:4, bonusAtk:0, desc:'Balance clásico.'},
+  {id:'aeroblade', name:'Aero Blade', mass:1.6, bonusDef:0, bonusSta:0, bonusAtk:6, desc:'Ligero; velocidad.'},
+  {id:'titanium', name:'Titanium Edge', mass:4, bonusDef:8, bonusSta:5, bonusAtk:2, desc:'Equilibrado y sólido.'},
+  {id:'meteor', name:'Meteor-X', mass:6, bonusDef:14, bonusSta:8, bonusAtk:-2, desc:'Extremadamente pesado.'},
+  {id:'swift', name:'Swift Core', mass:2, bonusDef:0, bonusSta:2, bonusAtk:4, desc:'Aumenta la agresividad.'}
+];
+
+const TIPS = [
+  {id:'needle', name:'Needle Grip', style:'center', grip:0.95, movetype:'center', stability:0.95, spdbonus:-8, desc:'Se queda en centro, mucha estabilidad.'},
+  {id:'anchor', name:'Anchor Guard', style:'def', grip:0.9, movetype:'stable', stability:0.9, spdbonus:-4, desc:'Difícil de empujar.'},
+  {id:'stamina', name:'Stamina Flow', style:'stamina', grip:0.85, movetype:'center', stability:0.92, spdbonus:-6, desc:'Máxima duración.'},
+  {id:'raging', name:'Raging Spike', style:'attack', grip:0.6, movetype:'aggressive', stability:0.6, spdbonus:+6, desc:'Se lanza a atacar, consume stamina.'},
+  {id:'cyclone', name:'Cyclone Dash', style:'attack', grip:0.65, movetype:'aggressive', stability:0.5, spdbonus:+8, desc:'Alta velocidad y agresión.'},
+  {id:'shadow', name:'Shadow Drift', style:'trick', grip:0.75, movetype:'random', stability:0.7, spdbonus:+2, desc:'Cambia comportamiento.'},
+  {id:'endless', name:'Endless Spin', style:'stamina', grip:0.9, movetype:'center', stability:0.98, spdbonus:-10, desc:'Resistencia prolongada.'},
+  {id:'dash', name:'Blitz Tip', style:'speed', grip:0.5, movetype:'fast', stability:0.5, spdbonus:+12, desc:'Velocidad pura.'}
+];
+
+/* =====================
+   Estado del juego
+   ===================== */
+let state = {
+  my: {layer:null, disc:null, tip:null, stats:null, x:0,y:0,vx:0,vy:0, mass:0, ang:0, launched:false, res:1, burst:0},
+  ai: {layer:null, disc:null, tip:null, stats:null, x:0,y:0,vx:0,vy:0, mass:0, ang:0, launched:false, res:1, burst:0},
+  arenaR:320, arenaC:{x:500,y:360},
+  running:false, result:null, time:0
+};
+
+/* =====================
+   Utility helpers
+   ===================== */
+const $ = (id)=>document.getElementById(id);
+function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+/* =====================
+   UI: montar listas
+   ===================== */
+function makePieceEl(p, group, onselect){
+  const el = document.createElement('div');
+  el.className='piece';
+  el.innerHTML = `<div><strong>${p.name}</strong><div class="small">${p.desc||''}</div></div><div class="small">${group==='layer'? 'Masa:'+p.mass : (group==='disc' ? 'Masa:'+p.mass : '')}</div>`;
+  el.addEventListener('click', ()=> onselect(p, el));
+  return el;
+}
+
+function populateLists(){
+  const layersDiv = $('layers'); layersDiv.innerHTML='';
+  LAYERS.forEach(l=> layersDiv.appendChild(makePieceEl(l,'layer',(p,el)=>{ selectLayer(p,el); })));
+  const discsDiv = $('discs'); discsDiv.innerHTML='';
+  DISCS.forEach(d=> discsDiv.appendChild(makePieceEl(d,'disc',(p,el)=>{ selectDisc(p,el); })));
+  const tipsDiv = $('tips'); tipsDiv.innerHTML='';
+  TIPS.forEach(t=> tipsDiv.appendChild(makePieceEl(t,'tip',(p,el)=>{ selectTip(p,el); })));
+}
+
+/* =====================
+   Selección piezas & cálculo stats
+   ===================== */
+function selectLayer(p,el){
+  document.querySelectorAll('#layers .piece').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected'); state.my.layer=p; computeMyStats();
+}
+function selectDisc(p,el){
+  document.querySelectorAll('#discs .piece').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected'); state.my.disc=p; computeMyStats();
+}
+function selectTip(p,el){
+  document.querySelectorAll('#tips .piece').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected'); state.my.tip=p; computeMyStats();
+}
+
+function computeStats(layer,disc,tip){
+  // combine base stats from layer + disc bonuses + tip modifiers
+  const atk = clamp(Math.round(layer.atk + (disc.bonusAtk||0) + (tip.spdbonus||0)*0.3), 5, 120);
+  const def = clamp(Math.round(layer.def + (disc.bonusDef||0)), 5, 120);
+  const sta = clamp(Math.round(layer.sta + (disc.bonusSta||0) + (tip.stability? (tip.stability*10):0 )), 10, 200);
+  const spd = clamp(Math.round(60 + (tip.spdbonus||0) + (120 - disc.mass*6) ), 10, 200);
+  const mass = clamp(Math.round(layer.mass + disc.mass), 3, 30);
+  return {atk,def,sta,spd,mass};
+}
+
+function computeMyStats(){
+  if(!state.my.layer || !state.my.disc || !state.my.tip) return;
+  state.my.stats = computeStats(state.my.layer, state.my.disc, state.my.tip);
+  state.my.mass = state.my.stats.mass;
+  updateStatUI();
+  $('beyTitle').textContent = `${state.my.layer.name} | ${state.my.disc.name} | ${state.my.tip.name}`;
+  // determine type by highest stat among atk/def/sta
+  const major = Math.max(state.my.stats.atk, state.my.stats.def, state.my.stats.sta);
+  let type='Equilibrio';
+  if(major===state.my.stats.atk) type='Ataque';
+  if(major===state.my.stats.def) type='Defensa';
+  if(major===state.my.stats.sta) type='Resistencia';
+  $('beyType').textContent = `Tipo: ${type}`;
+}
+
+function updateStatUI(){
+  $('statAtk').textContent = state.my.stats.atk;
+  $('statDef').textContent = state.my.stats.def;
+  $('statSta').textContent = state.my.stats.sta;
+  $('statSpd').textContent = state.my.stats.spd;
+}
+
+/* =====================
+   Random & AI assembly
+   ===================== */
+function assembleRandomFor(side){
+  const layer = randChoice(LAYERS);
+  const disc = randChoice(DISCS);
+  const tip = randChoice(TIPS);
+  const target = (side==='my')? state.my : state.ai;
+  target.layer=layer; target.disc=disc; target.tip=tip;
+  target.stats = computeStats(layer,disc,tip);
+  target.mass = target.stats.mass;
+  target.res = 1;
+  target.burst = 0;
+  target.launched = false;
+}
+
+$('randomize').addEventListener('click', ()=>{
+  assembleRandomFor('my'); computeMyStats(); renderSelectionHighlights();
+});
+
+function renderSelectionHighlights(){
+  // highlight matching pieces in lists
+  document.querySelectorAll('#layers .piece').forEach((el,i)=>{
+    const id = LAYERS[i].id;
+    if(state.my.layer && state.my.layer.id===id) el.classList.add('selected'); else el.classList.remove('selected');
+  });
+  document.querySelectorAll('#discs .piece').forEach((el,i)=>{
+    const id = DISCS[i].id;
+    if(state.my.disc && state.my.disc.id===id) el.classList.add('selected'); else el.classList.remove('selected');
+  });
+  document.querySelectorAll('#tips .piece').forEach((el,i)=>{
+    const id = TIPS[i].id;
+    if(state.my.tip && state.my.tip.id===id) el.classList.add('selected'); else el.classList.remove('selected');
+  });
+}
+
+/* =====================
+   Arena & physics
+   ===================== */
+const canvas = $('arena'); const ctx = canvas.getContext('2d');
+let lastT = 0;
+
+function resetArena(){
+  state.running=false; state.result=null; state.time=0;
+  assembleRandomFor('ai'); // AI chooses random bey
+  if(!state.my.layer){ assembleRandomFor('my'); computeMyStats(); renderSelectionHighlights(); }
+  // place my bey left, ai right
+  state.my.x = state.arenaC.x - state.arenaR*0.5; state.my.y = state.arenaC.y;
+  state.ai.x = state.arenaC.x + state.arenaR*0.5; state.ai.y = state.arenaC.y;
+  state.my.vx=state.my.vy=state.ai.vx=state.ai.vy=0;
+  state.my.res = state.my.stats.sta; state.ai.res = state.ai.stats.sta;
+  state.my.burst = 0; state.ai.burst = 0; state.my.launched=false; state.ai.launched=false;
+  $('resBar').style.width='100%'; $('burstBar').style.width='0%';
+  $('resBarAI').style.width='100%'; $('burstBarAI').style.width='0%';
+  $('result').textContent='—';
+}
+resetArena();
+
+function launchBoth(){
+  if(state.running) return;
+  state.running=true; state.time=0; state.result=null; $('result').textContent='—';
+  // my launch based on UI
+  const mode = $('launchMode').value; const power = Number($('power').value); const ang = Number($('angle').value) * Math.PI/180;
+  // base speed influenced by tip spdbonus and stats
+  const baseSpdMy = state.my.stats.spd * (power/120) * (1 + (state.my.tip.spdbonus||0)/100);
+  const baseSpdAI = state.ai.stats.spd * (0.9 + Math.random()*0.4);
+  // direction: mode influences target angle
+  let dirMy = ang + (mode==='attack'? (state.my.tip.movetype==='aggressive'? (Math.random()*0.6 - 0.3) : 0) : 0);
+  // translate into vx,vy away from initial position towards center or edges
+  const dirToCenterMy = Math.atan2(state.arenaC.y - state.my.y, state.arenaC.x - state.my.x);
+  const dirToCenterAI = Math.atan2(state.arenaC.y - state.ai.y, state.arenaC.x - state.ai.x);
+  // modify direction based on launch mode
+  let angFinalMy = dirToCenterMy + dirMy;
+  if($('launchMode').value === 'center') angFinalMy = dirToCenterMy + ang*0.0;
+  if($('launchMode').value === 'attack') angFinalMy = dirToCenterMy + (state.my.tip.movetype==='aggressive'? 0 : (Math.random()*0.4-0.2));
+  if($('launchMode').value === 'speed') angFinalMy = dirToCenterMy + ang*0.2;
+  state.my.vx = Math.cos(angFinalMy) * baseSpdMy / 8; state.my.vy = Math.sin(angFinalMy) * baseSpdMy / 8;
+  state.my.launched=true;
+
+  // AI launch decision: uses its tip behaviour
+  let aimNoise = (Math.random()-0.5)*0.6;
+  let aiMode = (Math.random()<0.5)? 'attack' : 'center';
+  let angFinalAI = dirToCenterAI + (aiMode==='attack'? (state.ai.tip.movetype==='aggressive'? aimNoise : aimNoise*1.5) : 0);
+  state.ai.vx = Math.cos(angFinalAI) * baseSpdAI / 8; state.ai.vy = Math.sin(angFinalAI) * baseSpdAI / 8;
+  state.ai.launched=true;
+  // AI occasional dash if aggressive
+}
+
+/* collision & damage rules */
+function tickPhysics(dt){
+  if(!state.running) return;
+  state.time += dt;
+  // basic movement and friction
+  const friction = 0.995 - (0.0005 * (state.my.stats.mass+state.ai.stats.mass)/2);
+  // update positions
+  [state.my, state.ai].forEach(b=>{
+    b.x += b.vx * dt * 60;
+    b.y += b.vy * dt * 60;
+    b.vx *= friction; b.vy *= friction;
+    // natural stamina drain over time
+    const timeDrain = 0.02 * (1 - (b.stats.sta/200)); // base
+    let tipFactor = 1.0;
+    if(b.tip.style==='stamina') tipFactor = 0.6;
+    if(b.tip.style==='attack') tipFactor = 1.4;
+    b.res -= timeDrain * tipFactor * dt * (1 + (60 - b.stats.spd)/200);
+    // clamp
+    b.res = Math.max(0, b.res);
+  });
+
+  // boundary check: if bey goes beyond arenaR + 24 => out (KO)
+  [ ['my',state.my], ['ai',state.ai] ].forEach(([key,b])=>{
+    const dx = b.x - state.arenaC.x, dy = b.y - state.arenaC.y;
+    const d = Math.hypot(dx,dy);
+    if(d > state.arenaR + 20){
+      // knocked out
+      state.running=false;
+      const winner = (key==='my')? 'IA' : 'TÚ';
+      $('result').textContent = `${winner} ganó por KO!`;
+    }
+  });
+
+  // collision between beys (circle approx)
+  const dx = state.ai.x - state.my.x, dy = state.ai.y - state.my.y; const dist = Math.hypot(dx,dy);
+  const minDist = 40;
+  if(dist < minDist){
+    // resolve positions
+    const nx = dx/dist, ny = dy/dist;
+    const overlap = (minDist - dist) * 0.5;
+    state.my.x -= nx * overlap; state.my.y -= ny * overlap;
+    state.ai.x += nx * overlap; state.ai.y += ny * overlap;
+    // compute relative velocity along normal
+    const rvx = state.ai.vx - state.my.vx, rvy = state.ai.vy - state.my.vy; const rel = rvx*nx + rvy*ny;
+    // impulse based on mass and rel vel
+    const e = 0.9;
+    let j = -(1+e) * rel; j /= (1/state.my.mass + 1/state.ai.mass);
+    // apply impulses
+    const impulseX = j * nx, impulseY = j * ny;
+    state.my.vx -= impulseX / state.my.mass; state.my.vy -= impulseY / state.my.mass;
+    state.ai.vx += impulseX / state.ai.mass; state.ai.vy += impulseY / state.ai.mass;
+    // damage calculation: depends on speed, attack stat and relative mass
+    const speedFactorMy = Math.hypot(state.my.vx, state.my.vy);
+    const speedFactorAI = Math.hypot(state.ai.vx, state.ai.vy);
+    // attacker contributions
+    const dmgToAI = calcImpactDamage(state.my, state.ai, speedFactorMy, j);
+    const dmgToMy = calcImpactDamage(state.ai, state.my, speedFactorAI, j);
+    applyDamage('ai', dmgToAI);
+    applyDamage('my', dmgToMy);
+  }
+
+  // check bursts or zero stamina
+  [ ['my',state.my], ['ai',state.ai] ].forEach(([key,b])=>{
+    // burst threshold depends on mass and defense
+    const burstThreshold = 80 - (b.stats.def/2) + (20 - b.stats.mass);
+    if(b.burst >= burstThreshold){
+      state.running=false;
+      const winner = (key==='my')? 'IA' : 'TÚ';
+      $('result').textContent = `${winner} ganó por Burst!`;
+    }
+    if(b.res <= 0){
+      state.running=false;
+      const winner = (key==='my')? 'IA' : 'TÚ';
+      $('result').textContent = `${winner} ganó por Resistencia!`;
+    }
+  });
+
+  // update UI bars
+  $('resBar').style.width = `${(state.my.res / state.my.stats.sta)*100}%`;
+  $('burstBar').style.width = `${clamp((state.my.burst / 100)*100,0,100)}%`;
+  $('resBarAI').style.width = `${(state.ai.res / state.ai.stats.sta)*100}%`;
+  $('burstBarAI').style.width = `${clamp((state.ai.burst / 100)*100,0,100)}%`;
+
+}
+
+/* damage formula */
+function calcImpactDamage(attacker, defender, speedFactor, impulse){
+  // speedFactor scales damage: faster -> more damage
+  const base = attacker.stats.atk * (speedFactor*8/100 + 0.4);
+  // defense reduces damage
+  const defFactor = defender.stats.def/100;
+  // tip interaction: if attacker tip is aggressive and defender is stamina type -> more effect
+  let tipMult = 1.0;
+  if(attacker.tip.style==='attack') tipMult += 0.15;
+  if(defender.layer.type==='defense') tipMult -= 0.12;
+  // mass influence: heavy defenders resist burst
+  const massAdj = Math.max(0.5, 1 - (defender.mass - attacker.mass)/20);
+  // final damage to stamina and burst increment
+  const dmg = Math.max(1, (base * tipMult * massAdj) - (defFactor*10));
+  // burst fill increment proportional to impulse and attacker's atk
+  const burstInc = Math.abs(impulse) * (attacker.stats.atk/100) * (1 + (speedFactor/1.4));
+  return {dmg, burstInc};
+}
+
+function applyDamage(targetKey, dmgObj){
+  const target = (targetKey==='my')? state.my : state.ai;
+  // adjust by target defenses and tip properties
+  let effectiveDmg = dmgObj.dmg;
+  // defender type reduces damage differently
+  if(target.layer.type === 'defense') effectiveDmg *= 0.78; // defense resists heavy hits
+  if(target.layer.type === 'stamina') effectiveDmg *= 0.9; // stamina reduces sustained drain
+  // apply to stamina (res)
+  target.res -= effectiveDmg * 0.06; // scale so fights take a while
+  // apply burst increments factoring mass (heavier less prone)
+  const massFactor = 1 - (target.mass-3)/30;
+  target.burst += dmgObj.burstInc * massFactor * 0.6;
+  // If attacker is attack type, scale extra burst to defender stamina types
+  // clamp
+  target.res = Math.max(0, target.res);
+  target.burst = clamp(target.burst, 0, 200);
+}
+
+/* =====================
+   Render loop
+   ===================== */
+function drawArena(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // arena glow
+  const grd = ctx.createRadialGradient(state.arenaC.x, state.arenaC.y, 40, state.arenaC.x, state.arenaC.y, state.arenaR+40);
+  grd.addColorStop(0, 'rgba(255,120,180,0.06)'); grd.addColorStop(1, 'rgba(20,30,50,0.06)');
+  ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(state.arenaC.x, state.arenaC.y, state.arenaR+24, 0, Math.PI*2); ctx.fill();
+
+  // arena circle
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(state.arenaC.x, state.arenaC.y, state.arenaR, 0, Math.PI*2); ctx.stroke();
+
+  // draw beys
+  drawBey(state.ai, '#ff9edd'); drawBey(state.my, '#77d7ff');
+
+  // HUD center info
+  ctx.fillStyle='#cfe6ff'; ctx.font='14px Inter'; ctx.fillText(`Time ${(state.time).toFixed(1)}s`, 16, 24);
+  if(!state.running && state.result) ctx.fillText(state.result, state.arenaC.x - 40, 60);
+}
+
+function drawBey(b, color){
+  if(!b || !b.stats) return;
+  // shadow
+  ctx.save();
+  ctx.beginPath(); ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.ellipse(b.x, b.y+14, 26 + b.mass*0.6, 10, 0, 0, Math.PI*2); ctx.fill();
+  // ring
+  ctx.beginPath(); ctx.fillStyle = color; ctx.arc(b.x, b.y, 22 + (b.mass-4), 0, Math.PI*2); ctx.fill();
+  // center mark
+  ctx.beginPath(); ctx.fillStyle='#031b2b'; ctx.arc(b.x, b.y, 10, 0, Math.PI*2); ctx.fill();
+  // a tiny rotation marker to suggest spin
+  ctx.beginPath(); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2;
+  ctx.moveTo(b.x, b.y-2); ctx.lineTo(b.x+12, b.y-2); ctx.stroke();
+  ctx.restore();
+}
+
+/* main loop */
+function loop(t){
+  if(!lastTick) lastTick = t;
+  const dt = Math.min(0.05, (t - lastTick)/1000) * Number($('speed').value);
+  lastTick = t;
+  if(state.running) tickPhysics(dt);
+  drawArena();
+  requestAnimationFrame(loop);
+}
+let lastTick = 0; requestAnimationFrame(loop);
+
+/* =====================
+   UI events & interactions
+   ===================== */
+$('spawnBtn').addEventListener('click', ()=>{ resetArena(); });
+$('resetBtn').addEventListener('click', ()=>{ resetArena(); });
+$('angle').addEventListener('input', ()=>{ $('angleLabel').textContent = $('angle').value + '°'; });
+
+$('launchBtn').addEventListener('click', ()=>{ launchBoth(); });
+
+
+// initial populate
+populateLists();
+renderSelectionHighlights();
+computeMyStats();
+
+/* =====================
+   Mouse placement/aiming (optional) - click to reposition before launch
+   ===================== */
+let placing = false;
+canvas.addEventListener('pointerdown', (e)=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvas.width/rect.width);
+  const y = (e.clientY - rect.top) * (canvas.height/rect.height);
+  // if not launched, set initial pos of my bey to click location
+  if(!state.my.launched){
+    state.my.x = x; state.my.y = y;
+  }
+  // if already launched, do nothing (could add riposte later)
+});
+
+// assemble button also applies to UI selection
+document.querySelectorAll('#layers .piece').forEach((el,i)=>{
+  el.addEventListener('click', ()=>{ selectLayer(LAYERS[i], el); });
+});
+document.querySelectorAll('#discs .piece').forEach((el,i)=>{
+  el.addEventListener('click', ()=>{ selectDisc(DISCS[i], el); });
+});
+document.querySelectorAll('#tips .piece').forEach((el,i)=>{
+  el.addEventListener('click', ()=>{ selectTip(TIPS[i], el); });
+});
+
+// initial default selections for convenience
+selectLayer(LAYERS[0], document.querySelectorAll('#layers .piece')[0]);
+selectDisc(DISCS[0], document.querySelectorAll('#discs .piece')[0]);
+selectTip(TIPS[0], document.querySelectorAll('#tips .piece')[0]);
+
+// assemble AI on load
+assembleRandomFor('ai');
+
+</script>
+</body>
+</html>
